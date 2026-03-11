@@ -26,12 +26,12 @@ request = {
 
 socket.send(json.dumps(request).encode("utf-8))
 ```
-Action: 
+**Action:**\
     overall_statistics: Returns the count of all entries in the table\
     filtered_statistics: Returns the count of all entries in the table matching the filters\
-Table: The name of the table you want to access\
-Filters: Table attributes you want to filter by\
-IMPORTANT: overall_statistics doesn't accept filters, and filtered_statistics requires filters\
+**Table:** The name of the table you want to access\
+**Filters:** Table attributes you want to filter by\
+**IMPORTANT:** overall_statistics doesn't accept filters, and filtered_statistics requires filters\
 
 # Recieve
 1. Store response from socket
