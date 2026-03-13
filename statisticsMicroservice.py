@@ -16,7 +16,7 @@ def overall_statistics(req):
     table = req["table"]
     conn, cursor = get_connection()
 
-    query = f"SELECT COUNT(*) FROM {table}"
+    query = f"SELECT COUNT(*) AS total FROM {table}"
 
     cursor.execute(query)
     result = cursor.fetchone()
@@ -35,11 +35,41 @@ def filtered_statistics(req):
     conn, cursor = get_connection()
 
     if filters:
-        condition = [f"{i} = %s" for i in filters]
+        condition = [f"{column} = %s" for column in filters]
         where = "WHERE " + " AND ".join(condition)
         vals = tuple(filters.values())
 
     query = f"SELECT COUNT(*) AS total FROM {table} {where}"
+
+    cursor.execute(query, vals)
+    results = cursor.fetchone()
+
+    cursor.close()
+    conn.close()
+
+    return results
+
+def attribute_statistics(req):
+    table = req["table"]
+    attribute = req["attribute"]
+    filters = req.get("filters", {})
+    where = ""
+    vals = ()
+
+    conn, cursor = get_connection()
+
+    if filters:
+        condition = [f"{column} = %s" for column in filters]
+        where = "WHERE " + " AND ".join(condition)
+        vals = tuple(filters.values())
+
+    query = f"""
+        SELECT {attribute}, COUNT(*) AS count
+        FROM {table}
+        {where}
+        GROUP BY {attribute}
+        ORDER BY count DESC
+    """
 
     cursor.execute(query, vals)
     results = cursor.fetchall()
@@ -48,6 +78,7 @@ def filtered_statistics(req):
     conn.close()
 
     return results
+    
 
 def route_handler(req):
     action = req.get("action")
@@ -57,6 +88,9 @@ def route_handler(req):
     
     elif action == "filtered_statistics":
         return filtered_statistics(req)
+    
+    elif action == "attribute_statistics":
+        return attribute_statistics(req)
     
     else:
         raise ValueError("Invalid Request")
@@ -71,12 +105,21 @@ def runServer():
 
     while True:
         message = socket.recv()
-        request = json.loads(message.decode("utf-8"))
-        result = route_handler(request)
-        response = {
-            "status": "success",
-            "data": result
-        }
+
+        try:
+            request = json.loads(message.decode("utf-8"))
+            result = route_handler(request)
+            response = {
+                "status": "success",
+                "data": result
+            }
+
+        except Exception as e:
+            response = {
+                "status": "error",
+                "message": str(e)
+            }
+
         socket.send(json.dumps(response).encode("utf-8"))
 
 if __name__ == "__main__":
